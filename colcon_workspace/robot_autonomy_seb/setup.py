@@ -1,4 +1,6 @@
 from setuptools import find_packages, setup
+from glob import glob
+import os
 
 package_name = 'robot_autonomy_seb'
 
@@ -10,17 +12,17 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py'))
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='ubuntu',
-    maintainer_email='ubuntu@todo.todo',
-    description='TODO: Package description',
-    license='TODO: License declaration',
-    tests_require=['pytest'],
+    maintainer='Seb-sti1',
+    maintainer_email='not@disclosed.org',
+    description='The package for my robot autonomy at DTU',
+    license='GPL-3.0',
     entry_points={
         'console_scripts': [
-                'icp = robot_autonomy_seb.icp:main',
+            'icp = robot_autonomy_seb.icp:main',
         ],
     },
 )
