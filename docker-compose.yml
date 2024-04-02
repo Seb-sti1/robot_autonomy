@@ -1,0 +1,17 @@
+services:
+  robot-autonomy:
+    container_name: robot-autonomy
+    image: sebsti1/robot-autonomy:latest
+    privileged: true
+    network_mode: "host"
+    devices:
+      - /dev/dri:/dev/dri
+    environment:
+      - DISPLAY=$DISPLAY
+      - XAUTHORITY=/home/ros2/.Xauthority
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - $HOME/.Xauthority:/home/ros2/.Xauthority
+      - ./colcon_workspace:/home/ros2/colcon_ws/src/
+    tty: true
+    entrypoint: "konsole -e /bin/bash"
