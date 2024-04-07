@@ -14,6 +14,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.py'))
     ],
+    tests_require=['pytest'],
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='Seb-sti1',
