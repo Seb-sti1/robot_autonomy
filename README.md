@@ -4,9 +4,12 @@ This is my repo for the [Robot Autonomy course of DTU](https://kurser.dtu.dk/cou
 
 ## Content
 
-- A docker image to be able to run ROS using docker but without using VNC _(it's too laggy)_
+- A docker image to be able to run ROS using docker but without using VNC _(it's too laggy)_.
 - An implementation of an ICP to compute the Odometry of the robot using the lidar.
-  You can start it by using the launch file `ros2 launch robot_autonomy_seb icp_standalone.launch.py`.
+  You can start it using the launch file `ros2 launch robot_autonomy_seb icp_standalone.launch.py`.
+- An implementation of a mapping solution. It uses a gaussian sensor model for the lidar, bresenham algorithm and bayes
+  law to account for the previous measurements. You can start it using the launch
+  file `ros2 launch robot_autonomy_seb map_standalone.launch.py`.
 
 ## Tests
 

@@ -26,6 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             'icp = robot_autonomy_seb.icp:main',
+            'map = robot_autonomy_seb.map:main',
         ],
     },
 )
