@@ -2,6 +2,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.conditions import IfCondition, UnlessCondition
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -14,6 +15,11 @@ def generate_launch_description():
     my_turtlebot_launch_dir = os.path.join(my_turtlebot, 'launch')
 
     nav2_params = os.path.join(my_package, 'params', 'nav2_params.yml')
+
+    declare_slam_cmd = DeclareLaunchArgument(
+        'slam',
+        default_value='False',
+        description='Whether run a SLAM')
 
     declare_rviz_filename = DeclareLaunchArgument(
         'rviz_filename',
@@ -29,11 +35,21 @@ def generate_launch_description():
     )
 
     ld = LaunchDescription()
+    ld.add_action(declare_slam_cmd)
     ld.add_action(declare_rviz_filename)
     ld.add_action(declare_rviz_config_file_cmd)
+
     ld.add_action(IncludeLaunchDescription(PythonLaunchDescriptionSource(
         os.path.join(my_turtlebot_launch_dir, 'turtlebot_simulation.launch.py')),
+        condition=UnlessCondition(LaunchConfiguration('slam')),
         launch_arguments={'params_file': nav2_params,
                           'rviz_config_file': LaunchConfiguration('rviz_config_file')}.items()
+    ))
+    ld.add_action(IncludeLaunchDescription(PythonLaunchDescriptionSource(
+        os.path.join(my_turtlebot_launch_dir, 'turtlebot_simulation.launch.py')),
+        condition=IfCondition(LaunchConfiguration('slam')),
+        launch_arguments={
+            'slam': LaunchConfiguration('slam'),
+            'rviz_config_file': LaunchConfiguration('rviz_config_file')}.items()
     ))
     return ld
