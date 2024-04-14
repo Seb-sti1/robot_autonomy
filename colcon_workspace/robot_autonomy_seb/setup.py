@@ -27,6 +27,7 @@ setup(
         'console_scripts': [
             'icp = robot_autonomy_seb.icp:main',
             'map = robot_autonomy_seb.map:main',
+            'nbv = robot_autonomy_seb.next_best_view:main',
         ],
     },
 )

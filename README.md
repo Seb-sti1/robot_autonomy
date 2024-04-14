@@ -10,6 +10,8 @@ This is my repo for the [Robot Autonomy course of DTU](https://kurser.dtu.dk/cou
 - An implementation of a mapping solution. It uses a gaussian sensor model for the lidar, bresenham algorithm and bayes
   law to account for the previous measurements. You can start it using the launch
   file `ros2 launch robot_autonomy_seb map_standalone.launch.py`.
+- An implementation of the _Next Best View_ algorithm. You can start it using the launch
+  file `ros2 launch robot_autonomy_seb nbv_standalone.launch.py`.
 
 ## Tests
 
