@@ -4,7 +4,10 @@
   <name>robot_autonomy_seb</name>
   <version>0.0.0</version>
   <description>The package for my robot autonomy at DTU</description>
-  <maintainer email="not@disclosed.org">Seb-sti1</maintainer>
+  <author email="65665540+seb-sti1@users.noreply.github.com">Seb-sti1</author>
+  <author email="walid.outtaleb@ensta-paris.fr">Nyllea</author>
+  <author email="daregox@gmail.com">SimpingOjou</author>
+  <maintainer email="65665540+seb-sti1@users.noreply.github.com">Seb-sti1</maintainer>
   <license>GPL-3.0</license>
 
   <exec_depend>rclpy</exec_depend>
