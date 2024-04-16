@@ -14,7 +14,7 @@ This was only tested on Ubuntu 22.04.
 
 ```sh
 # Clone this repo
-git clone https://github.com/Seb-sti1/robot_autonomy.git
+git clone git@github.com:Seb-sti1/robot_autonomy.git --recursive
 
 # Start the docker compose file
 docker compose up -d
