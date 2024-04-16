@@ -7,6 +7,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 
 from .utils import rotation_to_angle, scan_to_points, transform
+from nav_msgs.msg import Odometry
 
 
 class ICP:
@@ -131,7 +132,9 @@ class ICPNode(Node):
         super().__init__('homemade_icp')
         self.subscription = self.create_subscription(LaserScan, 'scan', self.listener_callback, 10)
         # TODO instead of a twist make a Odometry https://docs.ros.org/en/latest/api/nav_msgs/html/msg/Odometry.html
-        self.publisher = self.create_publisher(TwistStamped, 'lidar_twist', 10)
+        # Important, if everything works.
+        #self.publisher = self.create_publisher(TwistStamped, 'lidar_twist', 10)
+        self.publisher = self.create_publisher(Odometry, 'odom', 10)
 
         self.icp = ICP()
         self.last_time = None
@@ -147,20 +150,24 @@ class ICPNode(Node):
 
         T = self.icp.execute_icp(targets)
         if T is not None:
-            # TODO finish below
+            # TODO finish below -> important: publish odom 
             dt = t - self.last_time
             self.get_logger().info(
                 f"{T[0, 2] / dt:.03f}, {T[1, 2] / dt:.03f}, {rotation_to_angle(T[:2, :2] * 180 / 3.14 / dt):.02f}")
 
-            twist = TwistStamped()
-            twist.header.stamp = scan.header.stamp
-            twist.header.frame_id = 'odom'
-            twist.twist.linear.x = T[0, 2] / dt
-            twist.twist.linear.y = T[1, 2] / dt
-            twist.twist.linear.z = 0.
-            twist.twist.angular.z = rotation_to_angle(T[:2, :2]) / dt
+            # self.publisher.publish(twist)
+            odom = Odometry()
+            odom.header.stamp = scan.header.stamp
+            odom.child_frame_id = 'odom'
 
-            self.publisher.publish(twist)
+            # Twist of odom
+            odom.twist.twist.linear.x = T[0, 2] / dt
+            odom.twist.twist.linear.y = T[1, 2] / dt
+            odom.twist.twist.linear.z = 0.
+            odom.twist.twist.angular.z = rotation_to_angle(T[:2, :2]) / dt
+
+            self.publisher.publish(odom)
+
 
         self.last_time = t
 
