@@ -134,10 +134,13 @@ class ICPNode(Node):
         # TODO instead of a twist make a Odometry https://docs.ros.org/en/latest/api/nav_msgs/html/msg/Odometry.html
         # Important, if everything works.
         #self.publisher = self.create_publisher(TwistStamped, 'lidar_twist', 10)
-        self.publisher = self.create_publisher(Odometry, 'odom', 10)
+        self.publisher = self.create_publisher(Odometry, 'odom_lidar', 10)
 
         self.icp = ICP()
         self.last_time = None
+        self.pose_x = 0.
+        self.pose_y = 0.
+        self.angle = 0.
 
     def listener_callback(self, scan):
         """
@@ -152,10 +155,7 @@ class ICPNode(Node):
         if T is not None:
             # TODO finish below -> important: publish odom 
             dt = t - self.last_time
-            self.get_logger().info(
-                f"{T[0, 2] / dt:.03f}, {T[1, 2] / dt:.03f}, {rotation_to_angle(T[:2, :2] * 180 / 3.14 / dt):.02f}")
-
-            # self.publisher.publish(twist)
+            
             odom = Odometry()
             odom.header.stamp = scan.header.stamp
             odom.child_frame_id = 'odom'
@@ -165,6 +165,19 @@ class ICPNode(Node):
             odom.twist.twist.linear.y = T[1, 2] / dt
             odom.twist.twist.linear.z = 0.
             odom.twist.twist.angular.z = rotation_to_angle(T[:2, :2]) / dt
+
+            self.pose_x += T[0, 2]
+            self.pose_y += T[1, 2]
+            self.angle += rotation_to_angle(T[:2, :2])
+
+            # Pose of odom
+            odom.pose.pose.position.x = self.pose_x
+            odom.pose.pose.position.y = self.pose_y
+            odom.pose.pose.position.z = 0.
+            odom.pose.pose.orientation.z = self.angle
+
+            self.get_logger().info(
+                f"Pose (xy-o): {odom.pose.pose.position.x}, {odom.pose.pose.position.y}, {odom.pose.pose.orientation.z}")
 
             self.publisher.publish(odom)
 
