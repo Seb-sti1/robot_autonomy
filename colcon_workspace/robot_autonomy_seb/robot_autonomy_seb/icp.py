@@ -1,13 +1,17 @@
+import math
 import time
 
 import numpy as np
 import rclpy
-from geometry_msgs.msg import TwistStamped
+import transforms3d as t3d
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 
-from .utils import rotation_to_angle, scan_to_points, transform
+from .utils import rotation_to_angle, scan_to_points, get_transform, transform
 from nav_msgs.msg import Odometry
+
+from tf2_ros.buffer import Buffer
+from tf2_ros.transform_listener import TransformListener
 
 
 class ICP:
@@ -131,13 +135,10 @@ class ICPNode(Node):
     def __init__(self):
         super().__init__('homemade_icp')
         self.subscription = self.create_subscription(LaserScan, 'scan', self.listener_callback, 10)
-        # TODO instead of a twist make a Odometry https://docs.ros.org/en/latest/api/nav_msgs/html/msg/Odometry.html
-        # Important, if everything works.
-        #self.publisher = self.create_publisher(TwistStamped, 'lidar_twist', 10)
-        self.publisher = self.create_publisher(Odometry, 'odom_lidar', 10)
+        self.publisher = self.create_publisher(Odometry, 'lidar_odom', 10)
 
         self.icp = ICP()
-        self.last_time = None
+        self.last_time = self.get_clock().now().nanoseconds / 1_000_000_000
         self.pose_x = 0.
         self.pose_y = 0.
         self.angle = 0.
@@ -145,42 +146,53 @@ class ICPNode(Node):
     def listener_callback(self, scan):
         """
         Callback when new lidar measurement is received
-        :param scan: the data (see https://docs.ros.org/en/latest/api/sensor_msgs/html/msg/LaserScan.html)
+            :param scan: the data (see https://docs.ros.org/en/latest/api/sensor_msgs/html/msg/LaserScan.html)
         """
+        t = scan.header.stamp.nanosec / 1_000_000_000 + scan.header.stamp.sec
+        dt = t - self.last_time
+        if abs(dt) < 0.00001:
+            self.get_logger().warn(f"Time delta is too small ({dt}). Skipping this scan.")
+            return
 
-        t = scan.header.stamp.nanosec / 1000_000_000
         targets = scan_to_points(scan)
-
         T = self.icp.execute_icp(targets)
-        if T is not None:
-            # TODO finish below -> important: publish odom 
-            dt = t - self.last_time
-            
-            odom = Odometry()
-            odom.header.stamp = scan.header.stamp
-            odom.child_frame_id = 'odom'
+        if T is None:
+            if self.pose_x != 0. or self.pose_y != 0. or self.angle != 0.:
+                self.get_logger().warn(f"Transform is None.")
+            return
 
-            # Twist of odom
-            odom.twist.twist.linear.x = T[0, 2] / dt
-            odom.twist.twist.linear.y = T[1, 2] / dt
-            odom.twist.twist.linear.z = 0.
-            odom.twist.twist.angular.z = rotation_to_angle(T[:2, :2]) / dt
+        dx, dy = -T[0, 2], T[1, 2]
+        dx_in_dom = dx * math.cos(self.angle) - dy * math.sin(self.angle)
+        dy_in_dom = dx * math.sin(self.angle) + dy * math.cos(self.angle)
+        da = -rotation_to_angle(T[:2, :2])
 
-            self.pose_x += T[0, 2]
-            self.pose_y += T[1, 2]
-            self.angle += rotation_to_angle(T[:2, :2])
+        odom = Odometry()
+        odom.header.stamp = scan.header.stamp
+        odom.header.frame_id = 'odom'
+        odom.child_frame_id = 'base_footprint'
 
-            # Pose of odom
-            odom.pose.pose.position.x = self.pose_x
-            odom.pose.pose.position.y = self.pose_y
-            odom.pose.pose.position.z = 0.
-            odom.pose.pose.orientation.z = self.angle
+        # Twist of odom
+        odom.twist.twist.linear.x = dx_in_dom / dt
+        odom.twist.twist.linear.y = dy_in_dom / dt
+        odom.twist.twist.linear.z = 0.
+        odom.twist.twist.angular.z = da / dt
 
-            self.get_logger().info(
-                f"Pose (xy-o): {odom.pose.pose.position.x}, {odom.pose.pose.position.y}, {odom.pose.pose.orientation.z}")
+        self.pose_x += dx_in_dom
+        self.pose_y += dy_in_dom
+        self.angle += da
 
-            self.publisher.publish(odom)
+        # Pose of odom
+        odom.pose.pose.position.x = self.pose_x
+        odom.pose.pose.position.y = self.pose_y
+        odom.pose.pose.position.z = 0.
 
+        q = t3d.euler.euler2quat(0, 0, self.angle)
+        odom.pose.pose.orientation.w = q[0]
+        odom.pose.pose.orientation.x = q[1]
+        odom.pose.pose.orientation.y = q[2]
+        odom.pose.pose.orientation.z = q[3]
+
+        self.publisher.publish(odom)
 
         self.last_time = t
 
