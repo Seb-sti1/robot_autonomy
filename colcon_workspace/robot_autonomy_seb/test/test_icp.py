@@ -4,7 +4,7 @@ from robot_autonomy_seb.icp import ICP, rotation_to_angle
 
 
 # TODO: use pytest fixture
-@pytest.mark.skip(reason="Should be ignore (but not using this feature")
+@pytest.mark.skip(reason="Should be ignore (but not using this feature)")
 def test_template(points, angle, t, tolerance_angle=0.001, tolerance_t=1e-6):
     icp = ICP()
 
@@ -15,7 +15,7 @@ def test_template(points, angle, t, tolerance_angle=0.001, tolerance_t=1e-6):
     t = np.array([t]).T
     R = np.array([[np.cos(angle), -np.sin(angle)],
                   [np.sin(angle), np.cos(angle)]])
-    T = icp.execute_icp(np.dot(R, points) + t)
+    T = icp.execute_icp(np.matmul(R, points) + t)
 
     diff_angle = abs(angle - rotation_to_angle(T[:2, :2])) * 180 / 3.14
     print(f"angle diff: {diff_angle:.08f} °")

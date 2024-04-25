@@ -27,7 +27,7 @@ def scan_to_points(scan):
 
 
 def transform(T, points):
-    return np.dot(T[:2, :2], points) + T[:2, 2:3]
+    return np.matmul(T[:2, :2], points) + T[:2, 2:3]
 
 
 def get_transform(node, from_frame, to_frame):
@@ -47,5 +47,6 @@ def get_transform(node, from_frame, to_frame):
                                           map_to_lidar.transform.rotation.y,
                                           map_to_lidar.transform.rotation.z])[:2, :2]
     T[:2, 2] = [map_to_lidar.transform.translation.x, map_to_lidar.transform.translation.y]
+    T[2, 2] = 1
 
     return T
