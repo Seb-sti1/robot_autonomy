@@ -2,7 +2,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, ExecuteProcess
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, ExecuteProcess
 from launch_ros.actions import Node
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -14,9 +14,8 @@ def generate_launch_description():
     my_turtlebot_dir = get_package_share_directory('my_turtlebot')
     robot_autonomy_dir = get_package_share_directory('robot_autonomy_seb')
 
-    remappings = [('/tf', 'tf'),
-                  ('/tf_static', 'tf_static')]
-
+    namespace = LaunchConfiguration('namespace')
+    use_namespace = LaunchConfiguration('use_namespace')
     pose = {'x': LaunchConfiguration('x_pose', default='0.00'),
             'y': LaunchConfiguration('y_pose', default='0.00'),
             'z': LaunchConfiguration('z_pose', default='0.01'),
@@ -24,10 +23,26 @@ def generate_launch_description():
             'P': LaunchConfiguration('pitch', default='0.00'),
             'Y': LaunchConfiguration('yaw', default='0.00')}
 
+    remappings = [('/tf', 'tf'),
+                  ('/tf_static', 'tf_static')]
+
+    # Declare the launch arguments
+    declare_namespace_cmd = DeclareLaunchArgument(
+        'namespace',
+        default_value='',
+        description='Top-level namespace')
+
+    declare_use_namespace_cmd = DeclareLaunchArgument(
+        'use_namespace',
+        default_value='false',
+        description='Whether to apply a namespace to the navigation stack')
+
     rviz_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(bringup_launch_dir, 'rviz_launch.py')),
-        launch_arguments={'rviz_config': os.path.join(robot_autonomy_dir,
+        launch_arguments={'namespace': namespace,
+                          'use_namespace': use_namespace,
+                          'rviz_config': os.path.join(robot_autonomy_dir,
                                                       'rviz',
                                                       'full.rviz')}.items())
     # Specify the actions
@@ -48,6 +63,7 @@ def generate_launch_description():
         package='robot_state_publisher',
         executable='robot_state_publisher',
         name='robot_state_publisher',
+        namespace=namespace,
         output='screen',
         parameters=[{'use_sim_time': True,
                      'robot_description': robot_description}],
@@ -90,6 +106,7 @@ def generate_launch_description():
                     executable="nbv")
 
     ld = LaunchDescription([
+        declare_namespace_cmd, declare_use_namespace_cmd,
         start_gazebo_server_cmd, start_gazebo_client_cmd,
         start_robot_state_publisher_cmd,
         start_gazebo_spawner_cmd,
