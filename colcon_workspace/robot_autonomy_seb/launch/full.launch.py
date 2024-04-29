@@ -100,6 +100,15 @@ def generate_launch_description():
                     executable="nbv",
                     parameters=[{'use_sim_time': use_sim_time}])
 
+    # nav2
+    nav2_params = os.path.join(robot_autonomy_dir, 'params', 'nav2_params.yml')
+    nav2_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(bringup_launch_dir, 'navigation_launch.py')),
+        launch_arguments={
+            'params_file': nav2_params,
+            'use_sim_time': use_sim_time}.items())
+
     ld = LaunchDescription([
         declare_use_sim_time_cmd,
         start_gazebo_server_cmd, start_gazebo_client_cmd,
@@ -107,6 +116,7 @@ def generate_launch_description():
         start_gazebo_spawner_cmd,
         map_to_odom, odom_to_basefootprint,
         icp_node, map_node, nbv_node,
+        nav2_cmd,
         rviz_cmd
     ])
     return ld

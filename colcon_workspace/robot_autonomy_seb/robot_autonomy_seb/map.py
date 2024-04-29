@@ -8,6 +8,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 
 from .utils import get_transform, transform, scan_to_points
 
@@ -80,7 +81,9 @@ class MapNode(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
-        self.pub = self.create_publisher(OccupancyGrid, '/lidar_map', 2)
+        self.latching_qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,  # Feel wrong
+                                       durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.pub = self.create_publisher(OccupancyGrid, '/lidar_map', self.latching_qos)
 
         self.robot_pose = None
 
