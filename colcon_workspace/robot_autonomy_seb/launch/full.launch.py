@@ -77,7 +77,7 @@ def generate_launch_description():
     map_to_odom = IncludeLaunchDescription(PythonLaunchDescriptionSource(
         os.path.join(get_package_share_directory('robot_autonomy_seb'),
                      'launch',
-                     'publish_static_map_odom.launch.py'))
+                     'publish_static_tf.launch.py'))
     )
     odom_to_basefootprint = Node(package='robot_autonomy_seb',
                                  executable='topic_to_tf',
