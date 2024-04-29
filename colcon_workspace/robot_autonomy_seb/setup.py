@@ -14,7 +14,8 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
         (os.path.join('share', package_name, 'params'), glob('params/*.yml')),
-        (os.path.join('share', package_name, 'rviz'), glob('rviz/*.rviz'))
+        (os.path.join('share', package_name, 'rviz'), glob('rviz/*.rviz')),
+        (os.path.join('share', package_name, 'models/turtlebot3_burger'), glob('models/turtlebot3_burger/*.sdf'))
     ],
     tests_require=['pytest'],
     install_requires=['setuptools'],
@@ -28,6 +29,7 @@ setup(
             'icp = robot_autonomy_seb.icp:main',
             'map = robot_autonomy_seb.map:main',
             'nbv = robot_autonomy_seb.next_best_view:main',
+            'topic_to_tf = robot_autonomy_seb.topic_to_tf:main',
         ],
     },
 )

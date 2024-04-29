@@ -23,21 +23,11 @@ def generate_launch_description():
             'R': LaunchConfiguration('roll', default='0.00'),
             'P': LaunchConfiguration('pitch', default='0.00'),
             'Y': LaunchConfiguration('yaw', default='0.00')}
-    namespace = 'turtlebot'
-
-    rviz_nonamespace_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(bringup_launch_dir, 'rviz_launch.py')),
-        launch_arguments={'rviz_config': os.path.join(robot_autonomy_dir,
-                                                      'rviz',
-                                                      'full.rviz')}.items())
 
     rviz_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(bringup_launch_dir, 'rviz_launch.py')),
-        launch_arguments={'namespace': namespace,
-                          'use_namespace': 'True',
-                          'rviz_config': os.path.join(robot_autonomy_dir,
+        launch_arguments={'rviz_config': os.path.join(robot_autonomy_dir,
                                                       'rviz',
                                                       'full.rviz')}.items())
     # Specify the actions
@@ -55,16 +45,13 @@ def generate_launch_description():
         robot_description = infp.read()
 
     start_robot_state_publisher_cmd = Node(
-        # condition=IfCondition(use_robot_state_pub),
         package='robot_state_publisher',
         executable='robot_state_publisher',
         name='robot_state_publisher',
-        namespace=namespace,
         output='screen',
-        parameters=[{'use_sim_time': 'true',
+        parameters=[{'use_sim_time': True,
                      'robot_description': robot_description}],
-        remappings=remappings
-    )
+        remappings=remappings)
 
     start_gazebo_spawner_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -75,14 +62,39 @@ def generate_launch_description():
         launch_arguments={
             'x_pose': pose['x'],
             'y_pose': pose['y'],
-            'namespace': namespace
         }.items()
     )
+
+    # Publish TF
+    map_to_odom = IncludeLaunchDescription(PythonLaunchDescriptionSource(
+        os.path.join(get_package_share_directory('robot_autonomy_seb'),
+                     'launch',
+                     'publish_static_map_odom.launch.py'))
+    )
+    odom_to_basefootprint = Node(package='robot_autonomy_seb',
+                                 executable='topic_to_tf')
+
+    # Start our node
+    icp_node = Node(package="robot_autonomy_seb",
+                    executable="icp",
+                    remappings=[
+                        ('/lidar_odom', '/odom')
+                    ])
+    map_node = Node(package="robot_autonomy_seb",
+                    executable="map",
+                    # remappings=[
+                    #     ('/lidar_map', '/map')
+                    # ]
+                    )
+    nbv_node = Node(package="robot_autonomy_seb",
+                    executable="nbv")
 
     ld = LaunchDescription([
         start_gazebo_server_cmd, start_gazebo_client_cmd,
         start_robot_state_publisher_cmd,
         start_gazebo_spawner_cmd,
-        rviz_cmd, rviz_nonamespace_cmd
+        map_to_odom, odom_to_basefootprint,
+        icp_node, map_node, nbv_node,
+        rviz_cmd
     ])
     return ld
