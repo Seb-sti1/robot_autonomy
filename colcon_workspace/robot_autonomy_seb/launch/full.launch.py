@@ -2,7 +2,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, ExecuteProcess
+from launch.actions import IncludeLaunchDescription, ExecuteProcess, DeclareLaunchArgument
 from launch_ros.actions import Node
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -14,8 +14,9 @@ def generate_launch_description():
     my_turtlebot_dir = get_package_share_directory('my_turtlebot')
     robot_autonomy_dir = get_package_share_directory('robot_autonomy_seb')
 
-    namespace = LaunchConfiguration('namespace')
-    use_namespace = LaunchConfiguration('use_namespace')
+    remappings = [('/tf', 'tf'),
+                  ('/tf_static', 'tf_static')]
+
     pose = {'x': LaunchConfiguration('x_pose', default='0.00'),
             'y': LaunchConfiguration('y_pose', default='0.00'),
             'z': LaunchConfiguration('z_pose', default='0.01'),
@@ -23,25 +24,17 @@ def generate_launch_description():
             'P': LaunchConfiguration('pitch', default='0.00'),
             'Y': LaunchConfiguration('yaw', default='0.00')}
 
-    remappings = [('/tf', 'tf'),
-                  ('/tf_static', 'tf_static')]
+    use_sim_time = LaunchConfiguration('use_sim_time')
 
-    # Declare the launch arguments
-    declare_namespace_cmd = DeclareLaunchArgument(
-        'namespace',
-        default_value='',
-        description='Top-level namespace')
-
-    declare_use_namespace_cmd = DeclareLaunchArgument(
-        'use_namespace',
-        default_value='false',
-        description='Whether to apply a namespace to the navigation stack')
+    declare_use_sim_time_cmd = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='Use simulation (Gazebo) clock if true')
 
     rviz_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(bringup_launch_dir, 'rviz_launch.py')),
-        launch_arguments={'namespace': namespace,
-                          'use_namespace': use_namespace,
+        launch_arguments={'use_sim_time': use_sim_time,
                           'rviz_config': os.path.join(robot_autonomy_dir,
                                                       'rviz',
                                                       'full.rviz')}.items())
@@ -63,9 +56,8 @@ def generate_launch_description():
         package='robot_state_publisher',
         executable='robot_state_publisher',
         name='robot_state_publisher',
-        namespace=namespace,
         output='screen',
-        parameters=[{'use_sim_time': True,
+        parameters=[{'use_sim_time': use_sim_time,
                      'robot_description': robot_description}],
         remappings=remappings)
 
@@ -88,25 +80,28 @@ def generate_launch_description():
                      'publish_static_map_odom.launch.py'))
     )
     odom_to_basefootprint = Node(package='robot_autonomy_seb',
-                                 executable='topic_to_tf')
+                                 executable='topic_to_tf',
+                                 parameters=[{'use_sim_time': use_sim_time}])
 
     # Start our node
     icp_node = Node(package="robot_autonomy_seb",
                     executable="icp",
                     remappings=[
                         ('/lidar_odom', '/odom')
-                    ])
+                    ],
+                    parameters=[{'use_sim_time': use_sim_time}])
     map_node = Node(package="robot_autonomy_seb",
                     executable="map",
-                    # remappings=[
-                    #     ('/lidar_map', '/map')
-                    # ]
-                    )
+                    remappings=[
+                        ('/lidar_map', '/map')
+                    ],
+                    parameters=[{'use_sim_time': use_sim_time}])
     nbv_node = Node(package="robot_autonomy_seb",
-                    executable="nbv")
+                    executable="nbv",
+                    parameters=[{'use_sim_time': use_sim_time}])
 
     ld = LaunchDescription([
-        declare_namespace_cmd, declare_use_namespace_cmd,
+        declare_use_sim_time_cmd,
         start_gazebo_server_cmd, start_gazebo_client_cmd,
         start_robot_state_publisher_cmd,
         start_gazebo_spawner_cmd,
