@@ -114,8 +114,10 @@ def generate_launch_description():
         start_gazebo_server_cmd, start_gazebo_client_cmd,
         start_robot_state_publisher_cmd,
         start_gazebo_spawner_cmd,
-        map_to_odom, odom_to_basefootprint,
-        icp_node, map_node, nbv_node,
+        map_to_odom,
+        # odom_to_basefootprint,
+        # icp_node,
+        map_node, nbv_node,
         nav2_cmd,
         rviz_cmd
     ])
