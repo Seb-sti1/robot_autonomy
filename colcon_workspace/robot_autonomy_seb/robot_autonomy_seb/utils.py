@@ -9,6 +9,9 @@ def rotation_to_angle(R):
 
 
 def ranges_to_points(r, a):
+    """
+    Converts an array of radii r and angles a to an array of the corresponding cartesian coordinates of each points
+    """
     return np.array([r * np.cos(a), r * np.sin(a)])
 
 
