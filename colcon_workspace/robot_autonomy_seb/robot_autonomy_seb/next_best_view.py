@@ -97,43 +97,43 @@ class NBVNode(Node):
         self.nav.waitUntilNav2Active(localizer="bt_navigator")
         self.get_logger().info("Nav2 server ready")
         self.should_send_next_goal = True
-        self.timer = self.create_timer(10, self.timer_callback)
+        self.timer = self.create_timer(5, self.timer_callback)
 
     def timer_callback(self):
         if self.map is None or self.robot_pose is None or not self.should_send_next_goal:
             return
-        self.should_send_next_goal = False
-        self.send_goal()
-        self.should_send_next_goal = True
 
-    def send_goal(self):
-        self.raw_map = np.array(self.map.data).reshape((self.map.info.height, self.map.info.width))
-        point = self.find_next_best_view()
-        self.get_logger().info(f"Next best view suggest to go at {point.T}")
-
-        goal_pose = PoseStamped()
-        goal_pose.header.frame_id = 'map'
-        goal_pose.header.stamp = self.nav.get_clock().now().to_msg()
-        goal_pose.pose.position.x = point[0, 0]
-        goal_pose.pose.position.y = point[1, 0]
-        goal_pose.pose.position.z = 0.0
-        goal_pose.pose.orientation.x = 0.0
-        goal_pose.pose.orientation.y = 0.0
-        goal_pose.pose.orientation.z = 0.0
-        goal_pose.pose.orientation.w = 1.0
-        self.nav.goToPose(goal_pose)
-        while not self.nav.isTaskComplete():
+        # Check if last was completed
+        if not self.nav.isTaskComplete():
             feedback = self.nav.getFeedback()
             if Duration.from_msg(feedback.navigation_time) > Duration(seconds=30.0):
                 self.nav.cancelTask()
+        else:
+            # if finished print result
+            result = self.nav.getResult()
+            if result == TaskResult.SUCCEEDED:
+                self.get_logger().info('Goal succeeded!')
+            elif result == TaskResult.CANCELED:
+                self.get_logger().info('Goal was canceled!')
+            elif result == TaskResult.FAILED:
+                self.get_logger().info('Goal failed!')
 
-        result = self.nav.getResult()
-        if result == TaskResult.SUCCEEDED:
-            self.get_logger().info('Goal succeeded!')
-        elif result == TaskResult.CANCELED:
-            self.get_logger().info('Goal was canceled!')
-        elif result == TaskResult.FAILED:
-            self.get_logger().info('Goal failed!')
+            # Find another goal
+            self.raw_map = np.array(self.map.data).reshape((self.map.info.height, self.map.info.width))
+            point = self.find_next_best_view()
+            self.get_logger().info(f"Next best view suggest to go at {point.T}")
+
+            goal_pose = PoseStamped()
+            goal_pose.header.frame_id = 'map'
+            goal_pose.header.stamp = self.nav.get_clock().now().to_msg()
+            goal_pose.pose.position.x = point[0, 0]
+            goal_pose.pose.position.y = point[1, 0]
+            goal_pose.pose.position.z = 0.0
+            goal_pose.pose.orientation.x = 0.0
+            goal_pose.pose.orientation.y = 0.0
+            goal_pose.pose.orientation.z = 0.0
+            goal_pose.pose.orientation.w = 1.0
+            self.nav.goToPose(goal_pose)
 
     def from_world_to_coordinates(self, pose):
         coord = (
@@ -168,7 +168,7 @@ class NBVNode(Node):
 
         radius = self.lidar_max_range / self.map.info.resolution
         x, y = np.indices((self.map.info.height, self.map.info.width))
-        in_range = self.raw_map[np.power(x, 2) + np.power(y, 2) <= ma.pow(radius, 2)]
+        in_range = self.raw_map[np.power(x - a[0, 0], 2) + np.power(y - a[1, 0], 2) <= ma.pow(radius, 2)]
 
         count_unknown_visible_cell = np.sum(in_range == -1)
 
@@ -210,13 +210,14 @@ class NBVNode(Node):
         self.publish_marker(G)
         return self.from_coordinates_to_world(candidate[1])
 
-    def create_marker(self, uid, type, x, y, size, is_blue):
+    def create_marker(self, uid, type, x, y, size, is_blue, namespace="rrt_tree"):
         marker = Marker()
         marker.action = Marker.ADD
         marker.header.frame_id = 'map'
         marker.header.stamp = self.get_clock().now().to_msg()
         marker.id = uid
         marker.type = type
+        marker.ns = namespace
 
         marker.pose.position.x = float(x)
         marker.pose.position.y = float(y)
@@ -279,7 +280,7 @@ class NBVNode(Node):
         Called when an Odometry message is received. It keeps the self.robot_pose up-to-date.
         :param odom: odometry message
         """
-        if self.map == None:
+        if self.map is None:
             return
 
         map_to_odom = get_transform(
